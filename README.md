@@ -63,6 +63,58 @@ python apps/mask_picker/app.py --workspace data/my_dataset    # → http://127.0
 ```
 Фінальний датасет: `python tools/launchers/bake_all.py --data-dir data/my_dataset --pack`.
 
+### Що класти в `--data-dir` і що на виході
+На вході потрібна лише папка `images/` з фото (`.jpg/.jpeg/.png/.tif/.tiff/.bmp`) —
+або `.zip`-архів прямо в корені `data-dir`, який розпакується туди автоматично
+при першому запуску (кириличні імена та префікси `Копія `/`Copy of ` обробляються самі).
+Ніяких анотацій/лейблів на вхід не потрібно — їх генерує сегментація.
+
+```
+data/my_dataset/
+├── (my_photos.zip)   ← або одразу...
+└── images/           ← ...фото сюди (.jpg/.png/.tif/...)
+```
+
+Після `run_segmentation.py` з'являється:
+
+```
+data/my_dataset/output/
+├── cyto2/            ← по підпапці на кожну модель (більше моделей — з `--all`)
+│   ├── overlay/      ← PNG-візуалізація з масками
+│   ├── png/          ← маски як PNG
+│   ├── npy/          ← маски як numpy (.npy)
+│   └── yolo/         ← анотації YOLO (.txt)
+└── instanseg/ ...
+```
+
+Це і є вхід для Кроку 2 (`apps/mask_picker`). Повторний запуск з новими фото в
+`images/` — безпечний: вже оброблені фото (усі 4 формати присутні) пропускаються.
+
+### Крок 2 (`apps/mask_picker`) — який вхід і як підставити свою папку
+Це браузерний редактор: Cleanup (відбір), Polygons (доправка масок), Groups
+(групування в клітини). Вхід — `--workspace <папка>` з тією самою структурою,
+що виходить із Кроку 1:
+
+```
+<workspace>/
+├── images/     ← ті самі фото, що й у Кроці 1
+└── output/     ← результат run_segmentation.py (моделі автовиявляються)
+```
+
+Усередині `<workspace>` автоматично створюються/використовуються `selected/`,
+`skipped/`, `polygons/`, `groups/`, `labels.json`, `group_classes.json`.
+
+Щоб працювати з іншим датасетом — просто вкажи іншу папку (той самий шлях,
+що був `--data-dir` у Кроці 1):
+```bash
+python apps/mask_picker/app.py --workspace data/other_dataset
+```
+
+Для тонкого контролю (наприклад, фото і маски лежать у різних місцях) є окремі
+прапорці замість `--workspace`: `--images-dir`, `--output-root`, `--selected-dir`,
+`--skipped-dir`, `--polygons-dir`, `--groups-dir`. У цьому режимі `--output-root`
+має вже містити підпапки моделей з `overlay/` (інакше — помилка при старті).
+
 ## Документація
 - **[`docs/TECHNICAL_REPORT.md`](docs/TECHNICAL_REPORT.md)** — цілісна технічна записка.
 - **[`docs/architecture/`](docs/architecture/README.md)** — детальна архітектура (14 підсистем, front↔back).
